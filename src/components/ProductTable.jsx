@@ -11,6 +11,33 @@ const PLATFORM_LABEL = {
     FLIPKART: "Flipkart",
 };
 
+function getExternalId(product) {
+    if (product.externalProductId) return product.externalProductId;
+    if (product.external_product_id) return product.external_product_id;
+    if (product.url) {
+        if (product.platform === "AMAZON") {
+            const m = product.url.match(/\/dp\/([A-Z0-9]{10})/) ||
+                product.url.match(/\/gp\/product\/([A-Z0-9]{10})/);
+            if (m) return m[1];
+        }
+        if (product.platform === "FLIPKART") {
+            const m = product.url.match(/\/p\/(itm[a-zA-Z0-9]+)/);
+            if (m) return m[1];
+        }
+    }
+    return "";
+}
+
+function getImageSrc(product) {
+    if (product.imageUrl) return product.imageUrl;
+    if (product.image_url) return product.image_url;
+    if (product.platform === "AMAZON") {
+        const asin = getExternalId(product);
+        if (asin) return `https://m.media-amazon.com/images/P/${asin}.01._SX300_SY300_.jpg`;
+    }
+    return null;
+}
+
 function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "" }) {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -85,20 +112,11 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
         closeModal();
     }
 
-    function renderSortIcon(column) {
+    function SortIcon({ column }) {
         if (sortColumn !== column) return <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>⇅</span>;
         return sortDirection === "asc"
             ? <ChevronUp size={13} className="ms-1" />
             : <ChevronDown size={13} className="ms-1" />;
-    }
-
-    // Helpers to support multiple possible backend field names
-    function getImageSrc(product) {
-        return product.image_url || product.imageUrl || product.image || (product.images && product.images[0]) || product.thumbnail || product.img || product.picture || null;
-    }
-
-    function getExternalId(product) {
-        return product.external_product_id || product.externalProductId || product.externalId || product.sku || product.asin || "";
     }
 
     const startItem = processedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
@@ -110,89 +128,91 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                 <div className="table-responsive">
                     <table className="table table-vcenter card-table">
                         <thead>
-                            <tr>
-                                <th
-                                    onClick={() => handleSort("id")}
-                                    style={{ cursor: "pointer", userSelect: "none" }}
-                                >
-                                    Id {renderSortIcon("id")}
-                                </th>
-                                <th>Image</th>
-                                <th>External Product Id</th>
-                                <th
-                                    onClick={() => handleSort("name")}
-                                    style={{ cursor: "pointer", userSelect: "none" }}
-                                >
-                                    Name {renderSortIcon("name")}
-                                </th>
-                                <th
-                                    onClick={() => handleSort("platform")}
-                                    style={{ cursor: "pointer", userSelect: "none" }}
-                                >
-                                    Platform {renderSortIcon("platform")}
-                                </th>
-                                <th
-                                    onClick={() => handleSort("currentPrice")}
-                                    style={{ cursor: "pointer", userSelect: "none" }}
-                                >
-                                    Price {renderSortIcon("currentPrice")}
-                                </th>
-                                <th>Actions</th>
-                            </tr>
+                        <tr>
+                            <th
+                                onClick={() => handleSort("id")}
+                                style={{ cursor: "pointer", userSelect: "none" }}
+                            >
+                                Id <SortIcon column="id" />
+                            </th>
+                            <th>Image</th>
+                            <th>External Product Id</th>
+                            <th
+                                onClick={() => handleSort("name")}
+                                style={{ cursor: "pointer", userSelect: "none" }}
+                            >
+                                Name <SortIcon column="name" />
+                            </th>
+                            <th
+                                onClick={() => handleSort("platform")}
+                                style={{ cursor: "pointer", userSelect: "none" }}
+                            >
+                                Platform <SortIcon column="platform" />
+                            </th>
+                            <th
+                                onClick={() => handleSort("currentPrice")}
+                                style={{ cursor: "pointer", userSelect: "none" }}
+                            >
+                                Price <SortIcon column="currentPrice" />
+                            </th>
+                            <th>Actions</th>
+                        </tr>
                         </thead>
 
                         <tbody>
-                            {paginatedProducts.length > 0 ? (
-                                paginatedProducts.map(product => (
-                                    <tr key={product.id}>
-                                        <td>{product.id}</td>
-                                        <td>
-                                            {getImageSrc(product) ? (
-                                                <img
-                                                    src={getImageSrc(product)}
-                                                    alt={product.name || getExternalId(product) || `product-${product.id}`}
-                                                    style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6 }}
-                                                />
-                                            ) : (
-                                                <div style={{ width: 56, height: 56, background: "#e9ecef", borderRadius: 6 }} />
-                                            )}
-                                        </td>
+                        {paginatedProducts.length > 0 ? (
+                            paginatedProducts.map(product => (
+                                <tr key={product.id}>
+                                    <td>{product.id}</td>
 
-                                        <td>{getExternalId(product)}</td>
-                                        <td>{product.name}</td>
+                                    <td>
+                                        {getImageSrc(product) ? (
+                                            <img
+                                                src={getImageSrc(product)}
+                                                alt={product.name}
+                                                style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6 }}
+                                            />
+                                        ) : (
+                                            <div style={{ width: 56, height: 56, background: "#e9ecef", borderRadius: 6 }} />
+                                        )}
+                                    </td>
 
-                                        <td>
+                                    <td>{getExternalId(product)}</td>
+
+                                    <td>{product.name}</td>
+
+                                    <td>
                                             <span className={`badge ${PLATFORM_BADGE[product.platform] || "bg-secondary-lt"}`}>
                                                 {PLATFORM_LABEL[product.platform] || product.platform}
                                             </span>
-                                        </td>
+                                    </td>
 
-                                        <td>
-                                            ₹{Number(product.currentPrice).toLocaleString("en-IN", {
-                                                minimumFractionDigits: 2,
-                                                maximumFractionDigits: 2,
-                                            })}
-                                        </td>
+                                    <td>
+                                        ₹{Number(product.currentPrice).toLocaleString("en-IN", {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
+                                    </td>
 
-                                        <td>
-                                            <button
-                                                aria-label={`Edit ${product.name}`}
-                                                onClick={() => openEditModal(product)}
-                                                className="btn btn-sm btn-ghost-secondary"
-                                            >
-                                                <Edit size={14} className="me-1" />
-                                                Edit
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                        <td colSpan="7" className="text-center text-muted py-4">
-                                        No products found
+                                    <td>
+                                        <button
+                                            aria-label={`Edit ${product.name}`}
+                                            onClick={() => openEditModal(product)}
+                                            className="btn btn-sm btn-ghost-secondary"
+                                        >
+                                            <Edit size={14} className="me-1" />
+                                            Edit
+                                        </button>
                                     </td>
                                 </tr>
-                            )}
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="7" className="text-center text-muted py-4">
+                                    No products found
+                                </td>
+                            </tr>
+                        )}
                         </tbody>
                     </table>
                 </div>
@@ -240,7 +260,6 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                 </div>
             </div>
 
-            {/* Edit Modal */}
             {isModalOpen && (
                 <>
                     <div
