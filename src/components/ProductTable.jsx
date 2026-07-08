@@ -85,11 +85,20 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
         closeModal();
     }
 
-    function SortIcon({ column }) {
+    function renderSortIcon(column) {
         if (sortColumn !== column) return <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>⇅</span>;
         return sortDirection === "asc"
             ? <ChevronUp size={13} className="ms-1" />
             : <ChevronDown size={13} className="ms-1" />;
+    }
+
+    // Helpers to support multiple possible backend field names
+    function getImageSrc(product) {
+        return product.image_url || product.imageUrl || product.image || (product.images && product.images[0]) || product.thumbnail || product.img || product.picture || null;
+    }
+
+    function getExternalId(product) {
+        return product.external_product_id || product.externalProductId || product.externalId || product.sku || product.asin || "";
     }
 
     const startItem = processedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
@@ -106,25 +115,27 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                     onClick={() => handleSort("id")}
                                     style={{ cursor: "pointer", userSelect: "none" }}
                                 >
-                                    Id <SortIcon column="id" />
+                                    Id {renderSortIcon("id")}
                                 </th>
+                                <th>Image</th>
+                                <th>External Product Id</th>
                                 <th
                                     onClick={() => handleSort("name")}
                                     style={{ cursor: "pointer", userSelect: "none" }}
                                 >
-                                    Name <SortIcon column="name" />
+                                    Name {renderSortIcon("name")}
                                 </th>
                                 <th
                                     onClick={() => handleSort("platform")}
                                     style={{ cursor: "pointer", userSelect: "none" }}
                                 >
-                                    Platform <SortIcon column="platform" />
+                                    Platform {renderSortIcon("platform")}
                                 </th>
                                 <th
                                     onClick={() => handleSort("currentPrice")}
                                     style={{ cursor: "pointer", userSelect: "none" }}
                                 >
-                                    Price <SortIcon column="currentPrice" />
+                                    Price {renderSortIcon("currentPrice")}
                                 </th>
                                 <th>Actions</th>
                             </tr>
@@ -135,6 +146,19 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                 paginatedProducts.map(product => (
                                     <tr key={product.id}>
                                         <td>{product.id}</td>
+                                        <td>
+                                            {getImageSrc(product) ? (
+                                                <img
+                                                    src={getImageSrc(product)}
+                                                    alt={product.name || getExternalId(product) || `product-${product.id}`}
+                                                    style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6 }}
+                                                />
+                                            ) : (
+                                                <div style={{ width: 56, height: 56, background: "#e9ecef", borderRadius: 6 }} />
+                                            )}
+                                        </td>
+
+                                        <td>{getExternalId(product)}</td>
                                         <td>{product.name}</td>
 
                                         <td>
@@ -164,7 +188,7 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="5" className="text-center text-muted py-4">
+                                        <td colSpan="7" className="text-center text-muted py-4">
                                         No products found
                                     </td>
                                 </tr>
