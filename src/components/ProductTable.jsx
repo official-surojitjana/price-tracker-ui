@@ -1,5 +1,10 @@
-import { useState, useMemo } from "react";
-import { Edit, ChevronUp, ChevronDown } from "lucide-react";
+import {useState, useMemo} from "react";
+import {
+    Edit,
+    ChevronUp,
+    ChevronDown,ChartLine
+} from "lucide-react";
+import {updatePrice, getPriceHistory } from "../services/productService";
 
 const PLATFORM_BADGE = {
     AMAZON: "bg-blue-lt",
@@ -10,6 +15,7 @@ const PLATFORM_LABEL = {
     AMAZON: "Amazon",
     FLIPKART: "Flipkart",
 };
+
 
 function getExternalId(product) {
     if (product.externalProductId) return product.externalProductId;
@@ -38,12 +44,20 @@ function getImageSrc(product) {
     return null;
 }
 
-function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "" }) {
+function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""}) {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [editName, setEditName] = useState("");
     const [editPrice, setEditPrice] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState(null);
+    const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+    const [priceHistory, setPriceHistory] = useState([]);
+    const [historyLoading, setHistoryLoading] = useState(false);
+    const [historyError, setHistoryError] = useState(null);
+    const [historyProduct, setHistoryProduct] = useState(null);
+
 
     const [sortColumn, setSortColumn] = useState("name");
     const [sortDirection, setSortDirection] = useState("asc");
@@ -97,26 +111,61 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
         setSelectedProduct(product);
         setEditName(product.name || "");
         setEditPrice(product.currentPrice ?? "");
+        setSaveError(null);
         setIsModalOpen(true);
     }
 
     function closeModal() {
         setIsModalOpen(false);
         setSelectedProduct(null);
+        setSaveError(null);
     }
 
-    function saveChanges() {
-        if (typeof onUpdate === "function") {
-            onUpdate({ ...selectedProduct, name: editName, currentPrice: editPrice });
+    async function viewPriceHistory(product) {
+        setHistoryProduct(product);
+        setHistoryLoading(true);
+        setHistoryError(null);
+
+        try {
+            const history = await getPriceHistory(product.id);
+            setPriceHistory(history);
+            setIsHistoryModalOpen(true);
+        } catch (err) {
+            setHistoryError("Failed to load price history.");
+            setIsHistoryModalOpen(true);
+        } finally {
+            setHistoryLoading(false);
         }
-        closeModal();
     }
 
-    function SortIcon({ column }) {
-        if (sortColumn !== column) return <span className="text-muted ms-1" style={{ fontSize: "0.75rem" }}>⇅</span>;
+    function closeHistoryModal() {
+        setIsHistoryModalOpen(false);
+        setPriceHistory([]);
+        setHistoryError(null);
+        setHistoryProduct(null);
+    }
+
+    async function saveChanges() {
+        setIsSaving(true);
+        setSaveError(null);
+        try {
+            await updatePrice(selectedProduct.id, {price: parseFloat(editPrice)});
+            if (typeof onUpdate === "function") {
+                onUpdate({...selectedProduct, name: editName, currentPrice: parseFloat(editPrice)});
+            }
+            closeModal();
+        } catch (err) {
+            setSaveError(err.response?.data?.message || "Failed to update price");
+        } finally {
+            setIsSaving(false);
+        }
+    }
+
+    function SortIcon({column}) {
+        if (sortColumn !== column) return <span className="text-muted ms-1" style={{fontSize: "0.75rem"}}>⇅</span>;
         return sortDirection === "asc"
-            ? <ChevronUp size={13} className="ms-1" />
-            : <ChevronDown size={13} className="ms-1" />;
+            ? <ChevronUp size={13} className="ms-1"/>
+            : <ChevronDown size={13} className="ms-1"/>;
     }
 
     const startItem = processedProducts.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0;
@@ -131,29 +180,29 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                         <tr>
                             <th
                                 onClick={() => handleSort("id")}
-                                style={{ cursor: "pointer", userSelect: "none" }}
+                                style={{cursor: "pointer", userSelect: "none"}}
                             >
-                                Id <SortIcon column="id" />
+                                Id <SortIcon column="id"/>
                             </th>
                             <th>Image</th>
                             <th>External Product Id</th>
                             <th
                                 onClick={() => handleSort("name")}
-                                style={{ cursor: "pointer", userSelect: "none" }}
+                                style={{cursor: "pointer", userSelect: "none"}}
                             >
-                                Name <SortIcon column="name" />
+                                Name <SortIcon column="name"/>
                             </th>
                             <th
                                 onClick={() => handleSort("platform")}
-                                style={{ cursor: "pointer", userSelect: "none" }}
+                                style={{cursor: "pointer", userSelect: "none"}}
                             >
-                                Platform <SortIcon column="platform" />
+                                Platform <SortIcon column="platform"/>
                             </th>
                             <th
                                 onClick={() => handleSort("currentPrice")}
-                                style={{ cursor: "pointer", userSelect: "none" }}
+                                style={{cursor: "pointer", userSelect: "none"}}
                             >
-                                Price <SortIcon column="currentPrice" />
+                                Price <SortIcon column="currentPrice"/>
                             </th>
                             <th>Actions</th>
                         </tr>
@@ -170,10 +219,15 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                             <img
                                                 src={getImageSrc(product)}
                                                 alt={product.name}
-                                                style={{ width: 56, height: 56, objectFit: "cover", borderRadius: 6 }}
+                                                style={{width: 56, height: 56, objectFit: "cover", borderRadius: 6}}
                                             />
                                         ) : (
-                                            <div style={{ width: 56, height: 56, background: "#e9ecef", borderRadius: 6 }} />
+                                            <div style={{
+                                                width: 56,
+                                                height: 56,
+                                                background: "#e9ecef",
+                                                borderRadius: 6
+                                            }}/>
                                         )}
                                     </td>
 
@@ -182,7 +236,8 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                     <td>{product.name}</td>
 
                                     <td>
-                                            <span className={`badge ${PLATFORM_BADGE[product.platform] || "bg-secondary-lt"}`}>
+                                            <span
+                                                className={`badge ${PLATFORM_BADGE[product.platform] || "bg-secondary-lt"}`}>
                                                 {PLATFORM_LABEL[product.platform] || product.platform}
                                             </span>
                                     </td>
@@ -195,14 +250,26 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                     </td>
 
                                     <td>
-                                        <button
-                                            aria-label={`Edit ${product.name}`}
-                                            onClick={() => openEditModal(product)}
-                                            className="btn btn-sm btn-ghost-secondary"
-                                        >
-                                            <Edit size={14} className="me-1" />
-                                            Edit
-                                        </button>
+                                        <div className="d-flex gap-2">
+
+                                            <button
+                                                aria-label={`Edit ${product.name}`}
+                                                onClick={() => openEditModal(product)}
+                                                className="btn btn-sm btn-ghost-secondary"
+                                                title="Edit Product"
+                                            >
+                                                <Edit size={14} />
+                                            </button>
+
+                                            <button
+                                                className="btn btn-sm btn-ghost-info"
+                                                onClick={() => viewPriceHistory(product)}
+                                                title="Price History"
+                                            >
+                                                <ChartLine size={14} />
+                                            </button>
+
+                                        </div>
                                     </td>
                                 </tr>
                             ))
@@ -229,14 +296,15 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                     className="page-link"
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 >
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="icon" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none">
-                                        <polyline points="15 6 9 12 15 18" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="icon" width="24" height="24"
+                                         viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none">
+                                        <polyline points="15 6 9 12 15 18"/>
                                     </svg>
                                     prev
                                 </button>
                             </li>
 
-                            {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                            {Array.from({length: totalPages}, (_, i) => i + 1).map(page => (
                                 <li key={page} className={`page-item ${currentPage === page ? "active" : ""}`}>
                                     <button className="page-link" onClick={() => setCurrentPage(page)}>
                                         {page}
@@ -250,8 +318,9 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 >
                                     next
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="icon" width="24" height="24" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none">
-                                        <polyline points="9 6 15 12 9 18" />
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="icon" width="24" height="24"
+                                         viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" fill="none">
+                                        <polyline points="9 6 15 12 9 18"/>
                                     </svg>
                                 </button>
                             </li>
@@ -264,7 +333,7 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                 <>
                     <div
                         className="modal modal-blur fade show"
-                        style={{ display: "block" }}
+                        style={{display: "block"}}
                         role="dialog"
                         aria-modal="true"
                     >
@@ -272,10 +341,17 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                             <div className="modal-content">
                                 <div className="modal-header">
                                     <h5 className="modal-title">Edit Product</h5>
-                                    <button type="button" className="btn-close" onClick={closeModal} aria-label="Close" />
+                                    <button type="button" className="btn-close" onClick={closeModal}
+                                            aria-label="Close"/>
                                 </div>
 
                                 <div className="modal-body">
+                                    {saveError && (
+                                        <div className="alert alert-danger" role="alert">
+                                            {saveError}
+                                        </div>
+                                    )}
+
                                     <div className="mb-3">
                                         <label className="form-label">Name</label>
                                         <input
@@ -304,17 +380,143 @@ function ProductTable({ products, onUpdate, searchQuery = "", platformFilter = "
                                 </div>
 
                                 <div className="modal-footer">
-                                    <button onClick={closeModal} className="btn btn-link link-secondary me-auto">
+                                    <button onClick={closeModal} className="btn btn-link link-secondary me-auto"
+                                            disabled={isSaving}>
                                         Cancel
                                     </button>
-                                    <button onClick={saveChanges} className="btn btn-primary">
-                                        Save changes
+                                    <button onClick={saveChanges} className="btn btn-primary" disabled={isSaving}>
+                                        {isSaving ? (
+                                            <>
+                                                <span className="spinner-border spinner-border-sm me-2" role="status"
+                                                      aria-hidden="true"/>
+                                                Saving...
+                                            </>
+                                        ) : "Save changes"}
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="modal-backdrop fade show" onClick={closeModal} />
+                    <div className="modal-backdrop fade show" onClick={closeModal}/>
+                </>
+            )}
+
+            {isHistoryModalOpen && (
+                <>
+                    <div
+                        className="modal modal-blur fade show"
+                        style={{ display: "block" }}
+                        role="dialog"
+                        aria-modal="true"
+                    >
+                        <div className="modal-dialog modal-lg modal-dialog-centered">
+                            <div className="modal-content">
+
+                                <div className="modal-header">
+                                    <h5 className="modal-title">
+                                        Price History
+                                    </h5>
+
+                                    <button
+                                        type="button"
+                                        className="btn-close"
+                                        onClick={closeHistoryModal}
+                                    />
+                                </div>
+
+                                <div className="modal-body">
+
+                                    {historyProduct && (
+                                        <h4 className="mb-3">
+                                            {historyProduct.name}
+                                        </h4>
+                                    )}
+
+                                    {historyLoading && (
+                                        <div className="text-center py-5">
+                                            <div className="spinner-border" />
+                                        </div>
+                                    )}
+
+                                    {historyError && (
+                                        <div className="alert alert-danger">
+                                            {historyError}
+                                        </div>
+                                    )}
+
+                                    {!historyLoading &&
+                                        !historyError &&
+                                        priceHistory.length === 0 && (
+                                            <div className="text-center text-muted">
+                                                No history found.
+                                            </div>
+                                        )}
+
+                                    {!historyLoading &&
+                                        !historyError &&
+                                        priceHistory.length > 0 && (
+
+                                            <table className="table table-striped table-hover">
+                                                <thead>
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Price</th>
+                                                    <th>Captured At</th>
+                                                </tr>
+                                                </thead>
+
+                                                <tbody>
+
+                                                {priceHistory.map((item, index) => (
+
+                                                    <tr key={item.id}>
+                                                        <td>{index + 1}</td>
+
+                                                        <td>
+                                                            ₹{Number(item.price).toLocaleString(
+                                                            "en-IN",
+                                                            {
+                                                                minimumFractionDigits: 2,
+                                                                maximumFractionDigits: 2,
+                                                            }
+                                                        )}
+                                                        </td>
+
+                                                        <td>
+                                                            {new Date(
+                                                                item.capturedAt
+                                                            ).toLocaleString("en-IN")}
+                                                        </td>
+
+                                                    </tr>
+
+                                                ))}
+
+                                                </tbody>
+
+                                            </table>
+
+                                        )}
+
+                                </div>
+
+                                <div className="modal-footer">
+                                    <button
+                                        className="btn btn-secondary"
+                                        onClick={closeHistoryModal}
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+
+                    <div
+                        className="modal-backdrop fade show"
+                        onClick={closeHistoryModal}
+                    />
                 </>
             )}
         </>
