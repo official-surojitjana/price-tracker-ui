@@ -1,27 +1,82 @@
-import {useEffect, useState} from "react";
-import api from "../services/api";
+import { useEffect, useState } from "react";
+import { getDashboardStats } from "../services/dashboardService";
 
 function Dashboard() {
 
-    const [products, setProducts] = useState([]);
+    const [stats, setStats] = useState({
+        totalProducts: 0,
+        todaysScrapes: 0,
+        successfulScrapes: 0,
+        failedScrapes: 0,
+        priceDropsToday: 0
+    });
+
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-
-        api.get("/products")
-            .then(response => {
-                setProducts(response.data);
-            })
-            .catch(error => {
-                console.error(error);
-            });
-
+        loadDashboard();
     }, []);
+
+    async function loadDashboard() {
+        try {
+            const response = await getDashboardStats();
+            setStats(response);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    if (loading) {
+        return <div>Loading dashboard...</div>;
+    }
 
     return (
         <>
-            <h1 className="mb-4">Dashboard</h1>
+            <div className="row row-deck row-cards">
 
-            <h3>Total Products : {products.length}</h3>
+                <div className="col-sm-6 col-lg-3">
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="subheader">Total Products</div>
+                            <div className="h1">{stats.totalProducts}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-sm-6 col-lg-3">
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="subheader">Today's Scrapes</div>
+                            <div className="h1">{stats.todaysScrapes}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-sm-6 col-lg-3">
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="subheader">Successful Scrapes</div>
+                            <div className="h1 text-success">
+                                {stats.successfulScrapes}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="col-sm-6 col-lg-3">
+                    <div className="card">
+                        <div className="card-body">
+                            <div className="subheader">Failed Scrapes</div>
+                            <div className="h1 text-danger">
+                                {stats.failedScrapes}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </>
     );
 }

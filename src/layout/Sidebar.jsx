@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import {Link, NavLink} from "react-router-dom";
 
 function Sidebar() {
     return (
@@ -17,6 +17,10 @@ function Sidebar() {
 
                     <Link className="nav-link" to="/products">
                         Products
+                    </Link>
+
+                    <Link className="nav-link" to="/scrape-history">
+                        Scrape History
                     </Link>
 
                     <Link className="nav-link" to="/statistics">
