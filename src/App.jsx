@@ -6,6 +6,7 @@ import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Statistics from "./pages/Statistics";
 import Settings from "./pages/Settings";
+import ScrapeHistory from "./pages/ScrapeHistory";
 
 function App() {
 
@@ -19,6 +20,8 @@ function App() {
                     <Route path="/" element={<Dashboard />} />
 
                     <Route path="/products" element={<Products />} />
+
+                    <Route path="/scrape-history" element={<ScrapeHistory />} />
 
                     <Route path="/statistics" element={<Statistics />} />
 
