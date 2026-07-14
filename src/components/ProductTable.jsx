@@ -44,6 +44,19 @@ function getImageSrc(product) {
     return null;
 }
 
+function formatReviewCount(count) {
+    if (count == null) return null;
+    if (count >= 1000000) return (count / 1000000).toFixed(1) + "M";
+    if (count >= 1000) return (count / 1000).toFixed(1) + "K";
+    return count.toString();
+}
+
+function getRatingBadgeClass(rating) {
+    if (rating >= 4.5) return "bg-success-lt";
+    if (rating >= 4.0) return "bg-warning-lt";
+    return "bg-danger-lt";
+}
+
 function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""}) {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -77,12 +90,17 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
         return [...filtered].sort((a, b) => {
             let aVal = a[sortColumn];
             let bVal = b[sortColumn];
-            if (sortColumn === "currentPrice") {
-                aVal = parseFloat(aVal) || 0;
-                bVal = parseFloat(bVal) || 0;
+            if (
+                sortColumn === "id" ||
+                sortColumn === "currentPrice" ||
+                sortColumn === "rating" ||
+                sortColumn === "reviewCount"
+            ) {
+                aVal = Number(aVal) || 0;
+                bVal = Number(bVal) || 0;
             } else {
-                aVal = String(aVal).toLowerCase();
-                bVal = String(bVal).toLowerCase();
+                aVal = String(aVal ?? "").toLowerCase();
+                bVal = String(bVal ?? "").toLowerCase();
             }
             if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
             if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -178,19 +196,18 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                     <table className="table table-vcenter card-table">
                         <thead>
                         <tr>
-                            <th
-                                onClick={() => handleSort("id")}
-                                style={{cursor: "pointer", userSelect: "none"}}
-                            >
-                                Id <SortIcon column="id"/>
-                            </th>
                             <th>Image</th>
-                            <th>External Product Id</th>
                             <th
                                 onClick={() => handleSort("name")}
                                 style={{cursor: "pointer", userSelect: "none"}}
                             >
                                 Name <SortIcon column="name"/>
+                            </th>
+                            <th
+                                onClick={() => handleSort("category")}
+                                style={{cursor: "pointer", userSelect: "none"}}
+                            >
+                                Category <SortIcon column="category"/>
                             </th>
                             <th
                                 onClick={() => handleSort("platform")}
@@ -202,7 +219,19 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                                 onClick={() => handleSort("currentPrice")}
                                 style={{cursor: "pointer", userSelect: "none"}}
                             >
-                                Price <SortIcon column="currentPrice"/>
+                                Current Price <SortIcon column="currentPrice"/>
+                            </th>
+                            <th
+                                onClick={() => handleSort("rating")}
+                                style={{cursor: "pointer", userSelect: "none"}}
+                            >
+                                Rating <SortIcon column="rating"/>
+                            </th>
+                            <th
+                                onClick={() => handleSort("updatedAt")}
+                                style={{cursor: "pointer", userSelect: "none"}}
+                            >
+                                Updated <SortIcon column="updatedAt"/>
                             </th>
                             <th>Actions</th>
                         </tr>
@@ -212,28 +241,35 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                         {paginatedProducts.length > 0 ? (
                             paginatedProducts.map(product => (
                                 <tr key={product.id}>
-                                    <td>{product.id}</td>
-
                                     <td>
-                                        {getImageSrc(product) ? (
-                                            <img
-                                                src={getImageSrc(product)}
-                                                alt={product.name}
-                                                style={{width: 56, height: 56, objectFit: "cover", borderRadius: 6}}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: 56,
-                                                height: 56,
-                                                background: "#e9ecef",
-                                                borderRadius: 6
-                                            }}/>
-                                        )}
+                                        <a href={product.url} target="_blank" rel="noopener noreferrer">
+                                            {getImageSrc(product) ? (
+                                                <img
+                                                    src={getImageSrc(product)}
+                                                    alt={product.name}
+                                                    style={{width: 56, height: 56, objectFit: "cover", borderRadius: 6}}
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    width: 56,
+                                                    height: 56,
+                                                    background: "#e9ecef",
+                                                    borderRadius: 6
+                                                }}/>
+                                            )}
+                                        </a>
                                     </td>
 
-                                    <td>{getExternalId(product)}</td>
+                                    <td>
+                                        <a href={product.url} target="_blank" rel="noopener noreferrer"
+                                           style={{color: "inherit", textDecoration: "none"}}>
+                                            {product.name}
+                                        </a>
+                                    </td>
 
-                                    <td>{product.name}</td>
+                                    <td>
+                                        {product.category}
+                                    </td>
 
                                     <td>
                                             <span
@@ -247,6 +283,32 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
                                     })}
+                                    </td>
+
+                                    <td>
+                                        {product.rating != null ? (
+                                            <>
+                                                <span className={`badge ${getRatingBadgeClass(product.rating)}`}>
+                                                    ★ {product.rating}
+                                                </span>
+                                                {formatReviewCount(product.reviewCount) && (
+                                                    <div className="text-muted small mt-1">
+                                                        {formatReviewCount(product.reviewCount)} reviews
+                                                    </div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            "-"
+                                        )}
+                                    </td>
+
+                                    <td>
+                                        {product.updatedAt ? (
+                                            <>
+                                                <div>{new Date(product.updatedAt).toLocaleDateString("en-IN", {day: "2-digit", month: "short", year: "numeric"})}</div>
+                                                <div className="text-muted small">{new Date(product.updatedAt).toLocaleTimeString("en-IN", {hour: "2-digit", minute: "2-digit"})}</div>
+                                            </>
+                                        ) : "-"}
                                     </td>
 
                                     <td>

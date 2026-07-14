@@ -1,8 +1,16 @@
 import api from "./api";
 
-export async function getScrapeHistory() {
+export async function getScrapeHistory(params = {}) {
+    const response = await api.get("/scrape-history", { params });
+    return response.data;
+}
 
-    const response = await api.get("/scrape-history");
+export async function retryScrape(id) {
+    const response = await api.post(`/scrape-history/${id}/retry`);
+    return response.data;
+}
 
+export async function retryAllFailed() {
+    const response = await api.post("/scrape-history/retry-failed");
     return response.data;
 }
