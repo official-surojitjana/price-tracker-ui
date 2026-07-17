@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getScrapeHistory, retryScrape, retryAllFailed } from "../services/scrapeHistoryService";
+import { getScrapeHistory, retryScrape, retryAllFailed } from "../../services/scrapeHistoryService.js";
 
 const PAGE_SIZE = 20;
 

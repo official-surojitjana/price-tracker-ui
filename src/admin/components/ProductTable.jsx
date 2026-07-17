@@ -4,7 +4,7 @@ import {
     ChevronUp,
     ChevronDown,ChartLine
 } from "lucide-react";
-import {updatePrice, getPriceHistory } from "../services/productService";
+import {updatePrice, getPriceHistory } from "../../services/productService.js";
 
 const PLATFORM_BADGE = {
     AMAZON: "bg-blue-lt",
