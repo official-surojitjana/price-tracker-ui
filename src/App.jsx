@@ -1,12 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import Layout from "./layout/Layout";
+import Layout from "./admin/layout/Layout";
 
-import Dashboard from "./pages/Dashboard";
-import Products from "./pages/Products";
-import Statistics from "./pages/Statistics";
-import Settings from "./pages/Settings";
-import ScrapeHistory from "./pages/ScrapeHistory";
+import Dashboard from "./admin/pages/Dashboard";
+import Products from "./admin/pages/Products";
+import Statistics from "./admin/pages/Statistics";
+import Settings from "./admin/pages/Settings";
+import ScrapeHistory from "./admin/pages/ScrapeHistory";
 
 function App() {
 

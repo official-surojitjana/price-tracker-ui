@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getProducts, createProduct } from "../services/productService";
-import ProductTable from "../components/ProductTable";
-import ProductToolbar from "../components/ProductToolbar";
+import { getProducts, createProduct } from "../../services/productService.js";
+import ProductTable from "../components/ProductTable.jsx";
+import ProductToolbar from "../components/ProductToolbar.jsx";
 
 function Products() {
 
