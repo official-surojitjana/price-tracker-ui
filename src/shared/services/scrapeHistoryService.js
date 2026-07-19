@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "./api.js";
 
 export async function getScrapeHistory(params = {}) {
     const response = await api.get("/scrape-history", { params });

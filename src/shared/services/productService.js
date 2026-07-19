@@ -1,4 +1,4 @@
-import api from "./api";
+import api from "./api.js";
 import axios from "axios";
 
 export async function getProducts() {

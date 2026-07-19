@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { getScrapeHistory, retryScrape, retryAllFailed } from "../../services/scrapeHistoryService.js";
+import { getScrapeHistory, retryScrape, retryAllFailed } from "../../shared/services/scrapeHistoryService.js";
 
 const PAGE_SIZE = 20;
 
@@ -12,6 +12,13 @@ function getPageWindow(current, total) {
     pages.push(total - 1);
     return pages;
 }
+
+const AVAILABILITY_DISPLAY = {
+    AVAILABLE:     { emoji: "🟢", label: "In Stock" },
+    OUT_OF_STOCK:  { emoji: "🔴", label: "Out of Stock" },
+    NOT_FOUND:     { emoji: "⚫", label: "Product Removed" },
+    UNKNOWN:       { emoji: "🟡", label: "Unknown" },
+};
 
 function SortIcon({ column, sortBy, sortDir }) {
     if (sortBy !== column) return <span className="text-muted ms-1">⇅</span>;
@@ -222,6 +229,7 @@ function ScrapeHistory() {
                             {th("Product", "productName")}
                             {th("Platform", "platform")}
                             {th("Status", "status")}
+                            {th("Availability", "availability")}
                             {th("Price", "price")}
                             <th>Error</th>
                             {th("Scraped At", "scrapedAt")}
@@ -231,7 +239,7 @@ function ScrapeHistory() {
                         <tbody>
                         {history.length === 0 ? (
                             <tr>
-                                <td colSpan={7} className="text-center text-secondary py-4">
+                                <td colSpan={8} className="text-center text-secondary py-4">
                                     No results found
                                 </td>
                             </tr>
@@ -246,11 +254,27 @@ function ScrapeHistory() {
                                         ? <span className="badge bg-teal">Resolved</span>
                                         : <span className="badge bg-danger">Failed</span>}
                                 </td>
+
+                                <td>
+                                    {(() => {
+                                        const s = AVAILABILITY_DISPLAY[item.availabilityStatus];
+                                        return s
+                                            ? <span>{s.emoji} {s.label}</span>
+                                            : <span className="text-muted">-</span>;
+                                    })()}
+                                </td>
                                 <td>{item.scrapedPrice ?? "-"}</td>
                                 <td>{item.errorMessage || "-"}</td>
-                                <td>{item.scrapedAt}</td>
                                 <td>
-                                    {item.status === "FAILED" && (
+                                    {item.scrapedAt ? (
+                                        <>
+                                            <div>{new Date(item.scrapedAt).toLocaleDateString("en-IN", {day: "2-digit", month: "short", year: "numeric"})}</div>
+                                            <div className="text-muted small">{new Date(item.scrapedAt).toLocaleTimeString("en-IN", {hour: "2-digit", minute: "2-digit"})}</div>
+                                        </>
+                                    ) : "-"}
+                                </td>
+                                <td>
+                                    {item.status === "FAILED" ? (
                                         <div>
                                             <button
                                                 className="btn btn-sm btn-outline-warning"
@@ -258,13 +282,24 @@ function ScrapeHistory() {
                                                 disabled={retrying.has(item.id)}
                                             >
                                                 {retrying.has(item.id)
-                                                    ? <span className="spinner-border spinner-border-sm me-1"/>
-                                                    : "🔄"} Retry
+                                                    ? <span className="spinner-border spinner-border-sm me-1" />
+                                                    : "🔄"}{" "}
+                                                Retry
                                             </button>
+
                                             {retryErrors[item.id] && (
-                                                <div className="text-danger small mt-1">{retryErrors[item.id]}</div>
+                                                <div className="text-danger small mt-1">
+                                                    {retryErrors[item.id]}
+                                                </div>
                                             )}
                                         </div>
+                                    ) : (
+                                        <button
+                                            className="btn btn-sm btn-outline-secondary"
+                                            disabled
+                                        >
+                                            ✓ Retry
+                                        </button>
                                     )}
                                 </td>
                             </tr>

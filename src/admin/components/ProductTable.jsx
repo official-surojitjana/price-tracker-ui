@@ -4,7 +4,7 @@ import {
     ChevronUp,
     ChevronDown,ChartLine
 } from "lucide-react";
-import {updatePrice, getPriceHistory } from "../../services/productService.js";
+import {updatePrice, getPriceHistory } from "../../shared/services/productService.js";
 
 const PLATFORM_BADGE = {
     AMAZON: "bg-blue-lt",
@@ -56,6 +56,13 @@ function getRatingBadgeClass(rating) {
     if (rating >= 4.0) return "bg-warning-lt";
     return "bg-danger-lt";
 }
+
+const AVAILABILITY_DISPLAY = {
+    AVAILABLE:     { emoji: "🟢", label: "In Stock" },
+    OUT_OF_STOCK:  { emoji: "🔴", label: "Out of Stock" },
+    NOT_FOUND:     { emoji: "⚫", label: "Product Removed" },
+    UNKNOWN:       { emoji: "🟡", label: "Unknown" },
+};
 
 function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""}) {
 
@@ -216,6 +223,12 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                                 Platform <SortIcon column="platform"/>
                             </th>
                             <th
+                                onClick={() => handleSort("availabilityStatus")}
+                                style={{cursor: "pointer", userSelect: "none"}}
+                            >
+                                Status <SortIcon column="availabilityStatus"/>
+                            </th>
+                            <th
                                 onClick={() => handleSort("currentPrice")}
                                 style={{cursor: "pointer", userSelect: "none"}}
                             >
@@ -279,6 +292,15 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                                     </td>
 
                                     <td>
+                                        {(() => {
+                                            const s = AVAILABILITY_DISPLAY[product.availabilityStatus];
+                                            return s
+                                                ? <span>{s.emoji} {s.label}</span>
+                                                : <span className="text-muted">-</span>;
+                                        })()}
+                                    </td>
+
+                                    <td>
                                         ₹{Number(product.currentPrice).toLocaleString("en-IN", {
                                         minimumFractionDigits: 2,
                                         maximumFractionDigits: 2,
@@ -337,7 +359,7 @@ function ProductTable({products, onUpdate, searchQuery = "", platformFilter = ""
                             ))
                         ) : (
                             <tr>
-                                <td colSpan="7" className="text-center text-muted py-4">
+                                <td colSpan="10" className="text-center text-muted py-4">
                                     No products found
                                 </td>
                             </tr>
