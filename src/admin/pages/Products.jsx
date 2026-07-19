@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getProducts, createProduct } from "../../services/productService.js";
+import { getProducts, createProduct } from "../../shared/services/productService.js";
 import ProductTable from "../components/ProductTable.jsx";
 import ProductToolbar from "../components/ProductToolbar.jsx";
 
